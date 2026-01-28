@@ -1,5 +1,5 @@
 <template>
-  <div class="slider-dropdown" :style="componentStyle">
+  <div class="slider-dropdown" :class="{ expanded: isExpanded }" :style="componentStyle" ref="rootRef">
     <!-- Header (collapsed view) -->
     <div class="dropdown-header" @click="toggleDropdown">
       <div class="header-content">
@@ -8,14 +8,14 @@
           {{ formatValue(minRange) }} – {{ formatValue(maxRange) }}
         </div>
       </div>
-      <div class="chevron-icon" :class="{ expanded: isExpanded }">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <div class="chevron-icon" :class="{ 'chevron-expanded': isExpanded }">
+        <svg viewBox="0 0 20 20" fill="none">
           <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
     </div>
 
-    <!-- Expanded Content -->
+    <!-- Expanded Content (absolute overlay - does not push elements below) -->
     <div v-if="isExpanded" class="dropdown-content">
       <div class="value-display-large">
         {{ displayValue }}
@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 
 export default {
   props: {
@@ -60,10 +60,13 @@ export default {
   },
   emits: ['trigger-event'],
   setup(props, { emit }) {
-    // Internal state
-    const isExpanded = ref(props.content?.initiallyExpanded || false);
+    // Refs
+    const rootRef = ref(null);
     const sliderContainerRef = ref(null);
     const isDragging = ref(false);
+
+    // Internal state
+    const isExpanded = ref(props.content?.initiallyExpanded || false);
 
     // Internal variable for NoCode users
     const { value: currentValue, setValue: setCurrentValue } = wwLib.wwVariable.useComponentVariable({
@@ -83,7 +86,6 @@ export default {
     // Watch for initial value changes
     watch(() => props.content?.initialValue, (newValue) => {
       if (newValue !== undefined && newValue !== null) {
-        // Clamp the initial value to min/max range
         const min = props.content?.minValue ?? 20;
         const max = props.content?.maxValue ?? 1000;
         const clampedValue = Math.max(min, Math.min(max, newValue));
@@ -110,6 +112,12 @@ export default {
       '--text-color': props.content?.textColor || '#000000',
       '--slider-color': props.content?.sliderColor || '#000000',
       '--border-radius': props.content?.borderRadius || '12px',
+      '--border-width': props.content?.borderWidth || '2px',
+      '--header-padding-v': props.content?.headerPaddingVertical || '16px',
+      '--header-padding-h': props.content?.headerPaddingHorizontal || '20px',
+      '--label-font-size': props.content?.labelFontSize || '14px',
+      '--value-font-size': props.content?.valueFontSize || '20px',
+      '--chevron-size': props.content?.chevronSize || '20px',
     }));
 
     const valuePercentage = computed(() => {
@@ -150,6 +158,17 @@ export default {
       });
     };
 
+    const closeDropdown = () => {
+      if (isExpanded.value) {
+        isExpanded.value = false;
+        setIsDropdownExpanded(false);
+        emit('trigger-event', {
+          name: 'dropdown-toggle',
+          event: { isExpanded: false },
+        });
+      }
+    };
+
     const clampValue = (value) => {
       const rounded = Math.round(value / step.value) * step.value;
       return Math.max(minRange.value, Math.min(maxRange.value, rounded));
@@ -176,6 +195,7 @@ export default {
     const startDrag = (event) => {
       event.preventDefault();
       isDragging.value = true;
+      const frontDoc = wwLib.getFrontDocument();
 
       const handleMove = (e) => {
         if (!isDragging.value) return;
@@ -187,17 +207,34 @@ export default {
 
       const handleEnd = () => {
         isDragging.value = false;
-        document.removeEventListener('mousemove', handleMove);
-        document.removeEventListener('mouseup', handleEnd);
-        document.removeEventListener('touchmove', handleMove);
-        document.removeEventListener('touchend', handleEnd);
+        frontDoc.removeEventListener('mousemove', handleMove);
+        frontDoc.removeEventListener('mouseup', handleEnd);
+        frontDoc.removeEventListener('touchmove', handleMove);
+        frontDoc.removeEventListener('touchend', handleEnd);
       };
 
-      document.addEventListener('mousemove', handleMove);
-      document.addEventListener('mouseup', handleEnd);
-      document.addEventListener('touchmove', handleMove);
-      document.addEventListener('touchend', handleEnd);
+      frontDoc.addEventListener('mousemove', handleMove);
+      frontDoc.addEventListener('mouseup', handleEnd);
+      frontDoc.addEventListener('touchmove', handleMove);
+      frontDoc.addEventListener('touchend', handleEnd);
     };
+
+    // Click outside handler to close dropdown
+    const handleClickOutside = (event) => {
+      if (rootRef.value && !rootRef.value.contains(event.target) && isExpanded.value) {
+        closeDropdown();
+      }
+    };
+
+    onMounted(() => {
+      const frontDoc = wwLib.getFrontDocument();
+      frontDoc.addEventListener('mousedown', handleClickOutside);
+    });
+
+    onBeforeUnmount(() => {
+      const frontDoc = wwLib.getFrontDocument();
+      frontDoc.removeEventListener('mousedown', handleClickOutside);
+    });
 
     // Watch for all props that affect rendering
     watch(() => [
@@ -213,12 +250,19 @@ export default {
       props.content?.textColor,
       props.content?.sliderColor,
       props.content?.borderRadius,
+      props.content?.borderWidth,
+      props.content?.headerPaddingVertical,
+      props.content?.headerPaddingHorizontal,
+      props.content?.labelFontSize,
+      props.content?.valueFontSize,
+      props.content?.chevronSize,
     ], () => {
       // Reactivity handled by computed properties
     }, { deep: true });
 
     return {
       props,
+      rootRef,
       isExpanded,
       sliderContainerRef,
       currentValue,
@@ -239,19 +283,26 @@ export default {
 
 <style lang="scss" scoped>
 .slider-dropdown {
+  position: relative;
   width: 100%;
   background: var(--background-color);
-  border: 2px solid var(--border-color);
+  border: var(--border-width) solid var(--border-color);
   border-radius: var(--border-radius);
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+
+  &.expanded {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+  }
 }
 
 .dropdown-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: var(--header-padding-v) var(--header-padding-h);
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s ease;
@@ -269,13 +320,13 @@ export default {
 }
 
 .label {
-  font-size: 14px;
+  font-size: var(--label-font-size);
   font-weight: 400;
   opacity: 0.7;
 }
 
 .range-display {
-  font-size: 20px;
+  font-size: var(--value-font-size);
   font-weight: 600;
 }
 
@@ -283,18 +334,35 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--chevron-size);
+  height: var(--chevron-size);
   color: var(--text-color);
   transition: transform 0.3s ease;
 
-  &.expanded {
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  &.chevron-expanded {
     transform: rotate(180deg);
   }
 }
 
 .dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: calc(-1 * var(--border-width));
+  right: calc(-1 * var(--border-width));
+  background: var(--background-color);
+  border: var(--border-width) solid var(--border-color);
+  border-top: none;
+  border-bottom-left-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
   padding: 24px 32px 32px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 10;
   animation: slideDown 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes slideDown {
@@ -390,18 +458,6 @@ export default {
 
 // Responsive design
 @media (max-width: 768px) {
-  .dropdown-header {
-    padding: 14px 16px;
-  }
-
-  .label {
-    font-size: 13px;
-  }
-
-  .range-display {
-    font-size: 18px;
-  }
-
   .dropdown-content {
     padding: 20px 24px 28px;
   }

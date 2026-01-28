@@ -240,6 +240,104 @@ export default {
       },
       /* wwEditor:end */
     },
+
+    borderWidth: {
+      label: {
+        en: "Border Width",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "2px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Border width for the dropdown",
+      },
+      /* wwEditor:end */
+    },
+
+    headerPaddingVertical: {
+      label: {
+        en: "Header Vertical Padding",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "16px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Vertical padding inside the header (controls height)",
+      },
+      propertyHelp: "Reduce this value to make the input shorter",
+      /* wwEditor:end */
+    },
+
+    headerPaddingHorizontal: {
+      label: {
+        en: "Header Horizontal Padding",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "20px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Horizontal padding inside the header (controls width spacing)",
+      },
+      propertyHelp: "Reduce this value to make the input narrower",
+      /* wwEditor:end */
+    },
+
+    labelFontSize: {
+      label: {
+        en: "Label Font Size",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "14px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Font size for the label text",
+      },
+      /* wwEditor:end */
+    },
+
+    valueFontSize: {
+      label: {
+        en: "Value Font Size",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "20px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Font size for the range/value display",
+      },
+      /* wwEditor:end */
+    },
+
+    chevronSize: {
+      label: {
+        en: "Chevron Size",
+      },
+      type: "Length",
+      section: "style",
+      bindable: true,
+      defaultValue: "20px",
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "string",
+        tooltip: "Size of the dropdown chevron icon",
+      },
+      /* wwEditor:end */
+    },
   },
   triggerEvents: [
     {
