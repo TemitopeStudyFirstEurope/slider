@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="label">{{ props.content?.label || 'Label' }}</div>
         <div class="range-display">
-          {{ formatValue(minRange) }} – {{ formatValue(maxRange) }}
+          {{ hasValue ? formatValue(currentValue) : `${formatValue(minRange)} – ${formatValue(maxRange)}` }}
         </div>
       </div>
       <div class="chevron-icon" :class="{ 'chevron-expanded': isExpanded }">
